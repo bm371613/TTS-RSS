@@ -1,0 +1,29 @@
+[project]
+name = "tts-rss"
+version = "0.1.0"
+description = "Turn articles into a private podcast feed using ElevenLabs text-to-speech"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.27",
+    "trafilatura>=2.0",
+]
+
+[project.scripts]
+tts-rss = "tts_rss.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.32,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
