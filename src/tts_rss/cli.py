@@ -81,7 +81,8 @@ def cmd_add(args: argparse.Namespace) -> int:
         print("Aborted.")
         return 1
 
-    # Check the server before spending credits.
+    # Check the API key and the server before spending credits.
+    client = None if args.audio else ElevenLabs(config.elevenlabs)
     remote = Remote(config.server)
     episodes = feed.load_episodes(remote.read_text(EPISODES_FILE))
 
@@ -92,10 +93,9 @@ def cmd_add(args: argparse.Namespace) -> int:
     config.cache_dir.mkdir(parents=True, exist_ok=True)
     local_audio = config.cache_dir / audio_file
 
-    if args.audio:
+    if client is None:
         shutil.copyfile(args.audio, local_audio)
     else:
-        client = ElevenLabs(config.elevenlabs)
         client.synthesize(
             chunks,
             lang,

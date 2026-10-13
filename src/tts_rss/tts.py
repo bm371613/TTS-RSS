@@ -20,6 +20,10 @@ class TTSError(Exception):
 
 class ElevenLabs:
     def __init__(self, config: ElevenLabsConfig, client: httpx.Client | None = None):
+        if not config.api_key:
+            raise TTSError(
+                "ElevenLabs API key not set (ELEVENLABS_API_KEY or [elevenlabs] api_key)"
+            )
         self.config = config
         self.client = client or httpx.Client(timeout=httpx.Timeout(30, read=600))
 

@@ -72,9 +72,7 @@ def load_config(path: Path | None = None) -> Config:
         data = tomllib.load(f)
 
     el = data.get("elevenlabs", {})
-    api_key = os.environ.get("ELEVENLABS_API_KEY") or el.get("api_key")
-    if not api_key:
-        raise ConfigError("ElevenLabs API key not set (ELEVENLABS_API_KEY or [elevenlabs] api_key)")
+    api_key = os.environ.get("ELEVENLABS_API_KEY") or el.get("api_key") or ""
     voices = _require(el, "voices", "elevenlabs")
     if "en" not in voices:
         raise ConfigError("[elevenlabs.voices] must define at least an 'en' voice")
