@@ -71,7 +71,9 @@ def test_add_text_publishes_episode(env, tmp_path):
 
     feed = ET.fromstring((server / "feed.xml").read_text())
     assert feed.findtext("channel/item/title") == "Mój artykuł"
-    url = feed.find("channel/item/enclosure").get("url")
+    enclosure = feed.find("channel/item/enclosure")
+    assert enclosure is not None
+    url = enclosure.get("url")
     assert url == f"https://example.org/tts/audio/{first['audio_file']}"
     assert not list(server.rglob(".*.tmp"))
 

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import shlex
 import subprocess
+from collections.abc import Callable
 from pathlib import Path, PurePosixPath
+from typing import BinaryIO
 
 from .config import ServerConfig
 
@@ -18,7 +20,9 @@ class Remote:
         self.host = config.host
         self.root = PurePosixPath(config.path)
 
-    def _ssh(self, command: str, stdin=None, input: bytes | None = None) -> bytes:
+    def _ssh(
+        self, command: str, stdin: BinaryIO | None = None, input: bytes | None = None
+    ) -> bytes:
         result = subprocess.run(
             ["ssh", self.host, command], stdin=stdin, input=input, capture_output=True
         )
@@ -42,7 +46,7 @@ class Remote:
         with local.open("rb") as f:
             self._put(relative, lambda tmp: self._ssh(f"cat > {tmp}", stdin=f))
 
-    def _put(self, relative: str, write_tmp) -> None:
+    def _put(self, relative: str, write_tmp: Callable[[str], object]) -> None:
         """Write to a temporary name, then rename, so readers never see a partial file."""
         target = self.root / relative
         tmp = target.with_name(f".{target.name}.tmp")

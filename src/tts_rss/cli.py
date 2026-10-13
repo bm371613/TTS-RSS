@@ -14,7 +14,7 @@ from pathlib import Path
 import httpx
 
 from . import chunking, extract, feed, language
-from .config import ConfigError, ElevenLabsConfig, load_config
+from .config import Config, ConfigError, ElevenLabsConfig, load_config
 from .remote import Remote, RemoteError
 from .tts import ElevenLabs, TTSError, mp3_duration_seconds
 
@@ -50,7 +50,7 @@ def get_article(args: argparse.Namespace) -> extract.Article:
     return extract.Article(title=title, text=text, url=args.link)
 
 
-def publish(config, remote: Remote, episodes: list[feed.Episode]) -> None:
+def publish(config: Config, remote: Remote, episodes: list[feed.Episode]) -> None:
     remote.write_text(EPISODES_FILE, feed.dump_episodes(episodes))
     remote.write_text(FEED_FILE, feed.render_feed(config.feed, episodes))
 
@@ -176,7 +176,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        return args.func(args)
+        result: int = args.func(args)
+        return result
     except (ConfigError, extract.ExtractionError, TTSError, RemoteError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

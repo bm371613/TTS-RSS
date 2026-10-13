@@ -29,12 +29,14 @@ def test_render_feed():
     xml = render_feed(config, [make_episode(1), make_episode(2)])
     root = ET.fromstring(xml)
     channel = root.find("channel")
+    assert channel is not None
     assert channel.findtext("title") == "My feed"
     items = channel.findall("item")
     # Newest first.
     assert [i.findtext("guid") for i in items] == ["ep2", "ep1"]
     assert items[0].findtext("title") == "Episode 2 & <friends>"
     enclosure = items[0].find("enclosure")
+    assert enclosure is not None
     assert enclosure.get("url") == "https://example.org/tts/audio/ep2.mp3"
     assert enclosure.get("length") == "1920000"
     assert enclosure.get("type") == "audio/mpeg"
@@ -47,5 +49,7 @@ def test_media_base_url_overrides_audio_location():
         base_url="https://example.org/tts", media_base_url="https://u:p@example.org/tts"
     )
     root = ET.fromstring(render_feed(config, [make_episode(1)]))
-    url = root.find("channel/item/enclosure").get("url")
+    enclosure = root.find("channel/item/enclosure")
+    assert enclosure is not None
+    url = enclosure.get("url")
     assert url == "https://u:p@example.org/tts/audio/ep1.mp3"

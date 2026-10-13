@@ -87,5 +87,5 @@ episodes do not download, set `media_base_url` with the credentials in the confi
 ```sh
 uv sync
 uv run pytest
-uv run ruff check . && uv run black --check .
+uv run ruff check . && uv run black --check . && uv run mypy src tests
 ```

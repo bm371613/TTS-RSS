@@ -6,6 +6,7 @@ import os
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 DEFAULT_CONFIG_PATH = Path("~/.config/tts-rss/config.toml")
 
@@ -57,7 +58,7 @@ def config_path() -> Path:
     return Path(os.environ.get("TTS_RSS_CONFIG", DEFAULT_CONFIG_PATH)).expanduser()
 
 
-def _require(section: dict, key: str, name: str):
+def _require(section: dict[str, Any], key: str, name: str) -> Any:
     try:
         return section[key]
     except KeyError:

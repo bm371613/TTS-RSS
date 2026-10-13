@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable, Iterable
 from pathlib import Path
+from typing import Any
 
 import httpx
 
@@ -30,7 +31,7 @@ class ElevenLabs:
     def synthesize_chunk(
         self, text: str, voice_id: str, language: str, previous_request_ids: list[str]
     ) -> tuple[bytes, str | None]:
-        body: dict = {"text": text, "model_id": self.config.model_id}
+        body: dict[str, Any] = {"text": text, "model_id": self.config.model_id}
         if self.config.send_language_code:
             body["language_code"] = language
         if self.config.stitching and previous_request_ids:
