@@ -1,0 +1,35 @@
+# Copy to ~/.config/tts-rss/config.toml (or point TTS_RSS_CONFIG at it).
+
+[elevenlabs]
+# Or set the ELEVENLABS_API_KEY environment variable instead.
+api_key = "sk_..."
+# Voice IDs from your ElevenLabs voice library. "en" is required; "pl" is used for Polish text.
+voices = { en = "VOICE_ID_FOR_ENGLISH", pl = "VOICE_ID_FOR_POLISH" }
+model_id = "eleven_multilingual_v2"
+output_format = "mp3_44100_128"
+# Characters per request. Must stay under the model's limit (10,000 for multilingual v2,
+# 5,000 for v3); shorter chunks are also more reliable.
+max_chunk_chars = 4500
+# Send the detected language as language_code. Only some models accept it.
+send_language_code = false
+# Pass previous request IDs so consecutive chunks sound continuous. Turn off for models
+# that reject previous_request_ids.
+stitching = true
+
+[server]
+# Anything `ssh` accepts, including a Host alias from ~/.ssh/config.
+host = "myserver"
+# Directory on the server that Nginx serves. feed.xml and episodes.json go here,
+# MP3s go into audio/.
+path = "/var/www/tts"
+
+[feed]
+# Public URL of the directory above. Subscribe to <base_url>/feed.xml.
+base_url = "https://example.org/tts"
+title = "My articles"
+description = "Articles read aloud."
+author = "Me"
+# image_url = "https://example.org/tts/cover.jpg"
+# Base URL used for MP3 links, if it must differ from base_url, for example to embed
+# basic-auth credentials when the podcast app does not send them for audio downloads:
+# media_base_url = "https://user:password@example.org/tts"

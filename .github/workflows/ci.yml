@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      # ffmpeg lets the MP3 joining test run instead of being skipped.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run black --check .
+      - run: uv run mypy src tests
+      - run: uv run pytest -v
