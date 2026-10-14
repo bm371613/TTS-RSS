@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from email.utils import format_datetime
@@ -14,6 +15,10 @@ ITUNES = "http://www.itunes.com/dtds/podcast-1.0.dtd"
 ATOM = "http://www.w3.org/2005/Atom"
 ET.register_namespace("itunes", ITUNES)
 ET.register_namespace("atom", ATOM)
+
+# Characters XML 1.0 cannot represent, e.g. control characters scraped from a web page.
+# One of them in a title would make the whole feed unreadable.
+_INVALID_XML_CHARS = re.compile("[^\t\n\r\x20-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
 
 
 @dataclass
@@ -45,10 +50,14 @@ def dump_episodes(episodes: list[Episode]) -> str:
 
 
 def _sub(parent: ET.Element, tag: str, text: str | None = None, **attrs: str) -> ET.Element:
-    el = ET.SubElement(parent, tag, attrs)
+    el = ET.SubElement(parent, tag, {k: _xml_safe(v) for k, v in attrs.items()})
     if text is not None:
-        el.text = text
+        el.text = _xml_safe(text)
     return el
+
+
+def _xml_safe(text: str) -> str:
+    return _INVALID_XML_CHARS.sub("", text)
 
 
 def _duration(seconds: int) -> str:

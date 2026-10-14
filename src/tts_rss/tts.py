@@ -13,6 +13,7 @@ from .config import ElevenLabsConfig
 
 API_URL = "https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
 RETRY_STATUSES = {429, 500, 502, 503, 504}
+ATTEMPTS = 5
 
 
 class TTSError(Exception):
@@ -38,14 +39,23 @@ class ElevenLabs:
             # ElevenLabs accepts at most three previous requests for continuity.
             body["previous_request_ids"] = previous_request_ids[-3:]
 
-        for attempt in range(5):
-            response = self.client.post(
-                API_URL.format(voice_id=voice_id),
-                params={"output_format": self.config.output_format},
-                headers={"xi-api-key": self.config.api_key},
-                json=body,
-            )
-            if response.status_code in RETRY_STATUSES and attempt < 4:
+        for attempt in range(ATTEMPTS):
+            last_attempt = attempt == ATTEMPTS - 1
+            try:
+                response = self.client.post(
+                    API_URL.format(voice_id=voice_id),
+                    params={"output_format": self.config.output_format},
+                    headers={"xi-api-key": self.config.api_key},
+                    json=body,
+                )
+            except httpx.RequestError as e:
+                # A timeout or dropped connection; losing the chunks already paid for is
+                # worse than the small chance of paying for this one twice.
+                if last_attempt:
+                    raise TTSError(f"could not reach ElevenLabs: {e}") from e
+                time.sleep(2 ** (attempt + 1))
+                continue
+            if response.status_code in RETRY_STATUSES and not last_attempt:
                 time.sleep(2 ** (attempt + 1))
                 continue
             if response.status_code != 200:

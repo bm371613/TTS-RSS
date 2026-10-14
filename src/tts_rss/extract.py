@@ -27,8 +27,13 @@ class Article:
 
 
 def fetch_html(url: str) -> str:
-    response = httpx.get(url, headers={"User-Agent": USER_AGENT}, follow_redirects=True, timeout=30)
-    response.raise_for_status()
+    try:
+        response = httpx.get(
+            url, headers={"User-Agent": USER_AGENT}, follow_redirects=True, timeout=30
+        )
+        response.raise_for_status()
+    except httpx.HTTPError as e:
+        raise ExtractionError(f"could not fetch article: {e}") from e
     return response.text
 
 

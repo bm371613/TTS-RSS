@@ -11,10 +11,8 @@ import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
 
-import httpx
-
 from . import chunking, extract, feed, language
-from .config import Config, ConfigError, ElevenLabsConfig, load_config
+from .config import Config, ConfigError, ElevenLabsConfig, config_path, load_config
 from .remote import Remote, RemoteError
 from .tts import ElevenLabs, TTSError, mp3_duration_seconds
 
@@ -50,6 +48,14 @@ def get_article(args: argparse.Namespace) -> extract.Article:
     return extract.Article(title=title, text=text, url=args.link)
 
 
+def spoken_text(article: extract.Article) -> str:
+    """Read the title first, so the episode announces what it is, unless the text already
+    starts with it, as text taken from a file or stdin does."""
+    if article.text.startswith(article.title):
+        return article.text
+    return f"{article.title}\n\n{article.text}"
+
+
 def publish(config: Config, remote: Remote, episodes: list[feed.Episode]) -> None:
     remote.write_text(EPISODES_FILE, feed.dump_episodes(episodes))
     remote.write_text(FEED_FILE, feed.render_feed(config.feed, episodes))
@@ -58,11 +64,16 @@ def publish(config: Config, remote: Remote, episodes: list[feed.Episode]) -> Non
 def cmd_add(args: argparse.Namespace) -> int:
     article = get_article(args)
     lang = args.lang or language.detect_language(article.text)
-    # Read the title first, so the episode announces what it is.
-    spoken = f"{article.title}\n\n{article.text}"
+    spoken = spoken_text(article)
 
     if args.dry_run:
-        chunks = chunking.split_text(spoken, ElevenLabsConfig.max_chunk_chars)
+        # Use the configured chunk size if there is a config, but do not require one.
+        max_chars = (
+            load_config().elevenlabs.max_chunk_chars
+            if config_path().exists()
+            else ElevenLabsConfig.max_chunk_chars
+        )
+        chunks = chunking.split_text(spoken, max_chars)
         characters = sum(len(c) for c in chunks)
         print(spoken)
         print(
@@ -180,9 +191,6 @@ def main(argv: list[str] | None = None) -> int:
         return result
     except (ConfigError, extract.ExtractionError, TTSError, RemoteError) as e:
         print(f"error: {e}", file=sys.stderr)
-        return 2
-    except httpx.HTTPError as e:
-        print(f"error: could not fetch article: {e}", file=sys.stderr)
         return 2
     except KeyboardInterrupt:
         return 130

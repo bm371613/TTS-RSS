@@ -1,12 +1,13 @@
 import json
 import shutil
 import subprocess
+import time
 
 import httpx
 import pytest
 
 from tts_rss.config import ElevenLabsConfig
-from tts_rss.tts import ElevenLabs, mp3_duration_seconds, strip_mp3_headers
+from tts_rss.tts import ElevenLabs, TTSError, mp3_duration_seconds, strip_mp3_headers
 
 
 def test_synthesize_concatenates_chunks_and_stitches(tmp_path):
@@ -104,3 +105,32 @@ def test_strip_mp3_headers_on_real_files(tmp_path):
 def test_strip_mp3_headers_leaves_plain_audio_alone():
     frame = bytes([0xFF, 0xFB, 0x90, 0x64]) + b"\0" * 413
     assert strip_mp3_headers(frame * 3) == frame * 3
+
+
+def test_network_errors_are_retried(tmp_path, monkeypatch):
+    monkeypatch.setattr(time, "sleep", lambda _: None)
+    attempts = []
+
+    def handler(request):
+        attempts.append(request)
+        if len(attempts) < 3:
+            raise httpx.ReadTimeout("timed out", request=request)
+        return httpx.Response(200, content=b"x")
+
+    config = ElevenLabsConfig(api_key="k", voices={"en": "V"})
+    client = ElevenLabs(config, client=httpx.Client(transport=httpx.MockTransport(handler)))
+    client.synthesize(["hi"], "en", tmp_path / "o.mp3")
+    assert len(attempts) == 3
+    assert (tmp_path / "o.mp3").read_bytes() == b"x"
+
+
+def test_persistent_network_error_is_a_tts_error(tmp_path, monkeypatch):
+    monkeypatch.setattr(time, "sleep", lambda _: None)
+
+    def handler(request):
+        raise httpx.ConnectError("no route", request=request)
+
+    config = ElevenLabsConfig(api_key="k", voices={"en": "V"})
+    client = ElevenLabs(config, client=httpx.Client(transport=httpx.MockTransport(handler)))
+    with pytest.raises(TTSError, match="could not reach ElevenLabs"):
+        client.synthesize(["hi"], "en", tmp_path / "o.mp3")

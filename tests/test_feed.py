@@ -53,3 +53,9 @@ def test_media_base_url_overrides_audio_location():
     assert enclosure is not None
     url = enclosure.get("url")
     assert url == "https://u:p@example.org/tts/audio/ep1.mp3"
+
+
+def test_invalid_xml_characters_are_dropped():
+    config = FeedConfig(base_url="https://example.org/tts")
+    root = ET.fromstring(render_feed(config, [make_episode(1, title="Bad\x0b \x00title")]))
+    assert root.findtext("channel/item/title") == "Bad title"

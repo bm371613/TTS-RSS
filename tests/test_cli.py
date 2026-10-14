@@ -114,3 +114,33 @@ def test_declining_confirmation_spends_nothing(env, tmp_path, monkeypatch):
 def test_slugify():
     assert cli.slugify("Zażółć gęślą jaźń — Łódź!") == "zazolc-gesla-jazn-lodz"
     assert cli.slugify("???") == "episode"
+
+
+def test_title_from_first_line_is_read_once(env, tmp_path):
+    _, calls = env
+    f = tmp_path / "a.txt"
+    f.write_text("Heading\n\nThe body of the text, which is in English and is not long.")
+    assert cli.main(["add", str(f), "--yes"]) == 0
+    assert (
+        calls[0]["text"] == "Heading\n\nThe body of the text, which is in English and is not long."
+    )
+
+
+def test_unreachable_article_is_reported(monkeypatch, capsys):
+    def fail(*args, **kwargs):
+        raise httpx.ConnectError("no route")
+
+    monkeypatch.setattr(httpx, "get", fail)
+    assert cli.main(["add", "https://example.com/a", "--dry-run"]) == 2
+    assert "could not fetch article" in capsys.readouterr().err
+
+
+def test_dry_run_uses_configured_chunk_size(env, tmp_path, capsys):
+    config = tmp_path / "config.toml"
+    config.write_text(
+        config.read_text().replace("[elevenlabs]", "[elevenlabs]\nmax_chunk_chars = 100")
+    )
+    f = tmp_path / "a.txt"
+    f.write_text("Title\n\n" + "A sentence of the article. " * 10)
+    assert cli.main(["add", str(f), "--dry-run"]) == 0
+    assert "4 request(s)" in capsys.readouterr().err
